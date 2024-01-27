@@ -1,0 +1,23 @@
+#container {
+    width: 100vw;
+    height: 100vh;
+    background-color: #35654D;
+}
+
+.placeholder {
+    position: relative;
+    width: 110px;
+    min-width: 105px;
+    height: 160px;
+    border: solid 1px #E0E8E3;
+    border-radius: 5px;
+}
+
+.player-position h3 {
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.card-transition {
+    transition: top 0.5s, left 0.5s;
+}

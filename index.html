@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>3d Card</title>
+        <link href="style.css" rel="stylesheet">
+        <link href="table.css" rel="stylesheet">
+        <script src="app.js"></script>
+    </head>
+    <body>
+
+      <!--
+         The majority of the functionality is availalble. If you are interested in collaborating
+         in an effort to organize, restructure, refactor, rename or otherwise provide a means to
+         make this project more efficient and/or accessible to a variety of browsers.. please by
+         all means.. 
+      -->
+
+        <div id="container">
+            <div id="game-table">
+
+                <div id="game-deck">
+                    <div class="placeholder"></div>
+                    <div class="card flipped">
+                      <div class="content">
+                        <div class="front">
+                          <div class="front--card1"></div>
+                          <div class="front--card-value"></div>
+                          <div class="front--card2"></div>
+                        </div>
+                        <div class="back"><div>ifaus</div></div>
+                      </div>
+                    </div>
+                </div>
+
+                <div class="player-position">
+                  <h3></h3>
+                  <div class="placeholder"></div>
+                </div>
+            </div>
+
+            <button id="btnHit">Hit</button><button id="btnStand">Stand</button>
+        </div>
+    </body>
+</html>
