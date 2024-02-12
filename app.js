@@ -163,23 +163,14 @@ class BlackJack {
     }
 
     nextPlayer() {
-        const activePlayer = this.getActivePlayer();
-              activePlayer.deactivate();
-    
-        let indexCurrentPlayer = this.players.indexOf(activePlayer);
-        let indexNextPlayer = (indexCurrentPlayer - 1 + this.players.length) % this.players.length;
-    
-        // Find the next eligible player who has not busted
-        let nextPlayer = this.players[indexNextPlayer];
-    
-        // Continue finding the next eligible player
-        while (nextPlayer.hasBusted) {
-            indexNextPlayer = (indexNextPlayer - 1 + this.players.length) % this.players.length;
-            nextPlayer = this.players[indexNextPlayer];
-        }
-    
-        nextPlayer.activate();
-        this.app.observePlayers();
+        let curr = this.getActivePlayer();
+        let currIndex = this.players.indexOf(curr);
+
+        let nextIndex = (currIndex - 1 + this.players.length) % this.players.length;
+        let next = this.players[nextIndex];
+
+        curr.deactivate();
+        next.activate();
     }
 
     deal() {
@@ -187,74 +178,61 @@ class BlackJack {
     }
 
     determineWinner() {
-        let playersWithBlackjack = [];
-        let playersInRound = this.players.filter(player => !player.hasBusted);
+        console.log('Determining the winner...');
     
-        // Check for players with blackjack
-        playersInRound.forEach(player => {
-            if (player.hasBlackJack) {
-                playersWithBlackjack.push(player);
+        // Filter out players who have busted
+        const eligiblePlayers = this.players.filter(player => player.isEligible);
+    
+        // Find the player with blackjack (2 cards totaling 21)
+        const playerWithBlackjack = eligiblePlayers.find(player => player.hasBlackJack);
+    
+        if (playerWithBlackjack) {
+            // Compare the remaining players' totals
+            const remainingPlayers = eligiblePlayers.filter(player => player !== playerWithBlackjack);
+            if (remainingPlayers.length > 0) {
+                const winner = this.findPlayerWithHighestTotal(remainingPlayers);
+                console.log(`Player ${winner.name} wins with a Blackjack!`);
+                return;
             }
-        });
-    
-        // If all players have busted, go to the next round
-        if (playersInRound.length === 0) {
-            console.log('All players have busted!');
-            return;
         }
     
-        // If only one player has blackjack, they are the winner
-        if (playersWithBlackjack.length === 1) {
-            console.log(playersWithBlackjack[0].name + ' has Won!');
-            this.app.isActive = false;
-            return;
-        }
+        // Find the player(s) with a total of 21
+        const playersWith21 = eligiblePlayers.filter(player => player.total() === 21);
     
-        // If more than one player has blackjack, it's a tie, next round
-        if (playersWithBlackjack.length > 1) {
-            playersWithBlackjack.forEach(player => {
-                console.log(player.name + ' has TIED this round!')
-            });
-            return;
-        }
-    
-        // Find the player with the highest total
-        let winningPlayer = null;
-        let highestScore = 0;
-    
-        playersInRound.forEach(player => {
-            const playerTotal = player.total();
-            if (playerTotal > highestScore && playerTotal <= 21) {
-                winningPlayer = player;
-                highestScore = playerTotal;
+        if (playersWith21.length > 0) {
+            // Compare the remaining players' totals
+            const remainingPlayers = eligiblePlayers.filter(player => !playersWith21.includes(player));
+            if (remainingPlayers.length > 0) {
+                const winner = this.findPlayerWithHighestTotal(remainingPlayers);
+                console.log(`Player ${winner.name} wins with a total of 21!`);
+                return;
             }
-        });
-    
-        // If no player has a valid total, it's a tie, next round
-        if (winningPlayer === null) {
-            console.log('Next round!');
-            return;
         }
     
-        // Check if more than one player has the same highest total, it's a tie, next round
-        const tiedPlayers = playersInRound.filter(player => player.total() === highestScore);
-        if (tiedPlayers.length > 1) {
-            console.log('Several players have tied!'); // Tie, next round
-            this.app.nextRound();  // Add this line to move to the next round
-            return;
+        // No player with a total of 21, compare the totals directly
+        if (eligiblePlayers.length > 0) {
+            const winner = this.findPlayerWithHighestTotal(eligiblePlayers);
+            console.log(`Player ${winner.name} wins with the highest total!`);
         }
-    
-        console.log(winningPlayer.name + ' has Won!');
-        console.log(`End of Round ${this.app.round}!`);
-        this.app.nextRound();  // Add this line to move to the next round
     }
     
+    findPlayerWithHighestTotal(players) {
+        // Find the player with the highest total
+        let highestTotalPlayer = players[0];
+    
+        for (let i = 1; i < players.length; i++) {
+            if (players[i].total() > highestTotalPlayer.total()) {
+                highestTotalPlayer = players[i];
+            }
+        }
+        return highestTotalPlayer;
+    }
 }
 
 class App {
     constructor(blackjack) {
         this.blackjack = new blackjack(this);
-        this.isActive = true;
+        this.isActive = null;
         this.round = 0;
 
         this.init();
@@ -284,16 +262,6 @@ class App {
         const lastPlayerIndex = this.blackjack.players.length - 1;
         if (lastPlayerIndex >= 0) {
             this.blackjack.players[lastPlayerIndex].activate();
-        }
-    }
-
-    observePlayers() {
-        if (!this.isActive) { return; }
-        const eligiblePlayers = this.blackjack.players.filter(player => !player.hasBusted);
-        const allPlayersHaveStood = eligiblePlayers.every(player => player.hasStood);
-        if (allPlayersHaveStood) {
-            this.blackjack.determineWinner();
-            this.isActive = false;
         }
     }
     
@@ -364,8 +332,6 @@ class App {
                 card.component.template.removeEventListener('animationend', animationEndHandler);
             };
             card.component.template.addEventListener('animationend', animationEndHandler);
-
-            this.observePlayers();
     }
 
     updatePlayerTotal(player) {
@@ -384,9 +350,10 @@ class Player {
         this.cards = [];
         this.template = new PlayerTemplate();
         this.isActive = false;
-        this.hasBlackJack = false;
         this.hasBusted = false;
         this.hasStood = false;
+        this.hasBlackJack = false;
+        this.isEligible = true;
     }
 
     activate() {
@@ -395,7 +362,6 @@ class Player {
     }
 
     turn() {
-        console.log('Active: ' + this.name);
 
         const shouldHit = (this.total() < 21) && (this.calcBustProbability() < 0.5);
 
@@ -424,14 +390,17 @@ class Player {
     
         } else {
 
-            if (this.total() > 21) {
-                this.bust();
-            }else if (this.total === 21) {
+            if (this.cards.length === 2 && this.total() === 21) {
+                this.hasBlackJack = true;
+                this.stand();
+
+            } else if (this.total() === 21) {
                 this.has21();
+
+            } else if (this.total() > 21) {
+                this.bust();
             }
         }
-
-        this.app.observePlayers();
     }
     
     
@@ -446,14 +415,13 @@ class Player {
             if (newTotal > 21) { bustCount++; }
         }
         const probability = bustCount / numCardsRemain.length;
-        console.log(Math.ceil(probability*100));
         return probability;
     }
 
     bust() {
         console.log(this.name + ' BUSTED');
         this.hasBusted = true;
-        this.app.observePlayers();
+        this.isEligible = false;
         if (this.isAI) {
             clearTimeout(this.AI_delayID);
         }
@@ -463,7 +431,8 @@ class Player {
     stand() {
         console.log(this.name + ' STOOD');
         this.hasStood = true;
-        this.app.observePlayers();
+        this.hasBusted = false;
+        this.isEligible = false;
         if (this.isAI) {
             clearTimeout(this.AI_delayID);
         }
@@ -471,9 +440,8 @@ class Player {
     }
 
     has21() {
-        console.log(this.name + ' BLACKJACK');
-        this.hasBlackJack = true;
-        this.app.observePlayers();
+        console.log(this.name + ' has 21');
+        this.hasStood = true;
         if (this.isAI) {
             this.app.blackjack.nextPlayer();
             clearTimeout(this.AI_delayID);
@@ -500,7 +468,6 @@ class Player {
         });
         const adjTotal = this.adjustForAces(sum);
 
-        console.log(`${this.name}: ${adjTotal}`);
         return adjTotal;
     }
 
